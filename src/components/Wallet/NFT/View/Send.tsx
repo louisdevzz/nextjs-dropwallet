@@ -4,7 +4,7 @@ import WebApp from "@twa-dev/sdk";
 import { getState, submitTransaction, transferNFT } from "@/hooks/SDK";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import Image from "next/image";
+import { useRouter } from "next/router";
 
 const Header = dynamic(()=>import("@/components/Header"),{ssr:false})
 
@@ -19,6 +19,7 @@ export default function Send(){
     const [msgAccount,setMsgAccount] = useState<string>("");
     const [loading,setLoading] = useState<boolean>(false);
     const [status,setStatus] = useState<string>('');
+    const router = useRouter();
 
     useEffect(()=>{
         WebApp.CloudStorage.getItem("account",(err,rs)=>setAccount(rs as string));
@@ -56,13 +57,15 @@ export default function Send(){
             if (data.transaction_outcome.outcome.status) {
                 setLoading(false)
                 localStorage.setItem("hash",data.transaction.hash);
-                location.replace(`/wallet/nfts/collection/${contractName}/token/${tokenId}/sendSingle/success`)
+                router.push(`/wallet/nfts/collection/${contractName}/token/${tokenId}/sendSingle/success`)
             }else{
                 setStatus("<b>Error cannt transfer. try again</b>")
             }
             
         }
     }
+
+
     return(
         <div className="w-full min-h-screen bg-[#180E35]">
             <Header/>
@@ -74,7 +77,7 @@ export default function Send(){
                 <div className="p-5 h-[85vh]">
                 <div className="flex flex-row items-center text-center">
                     <Link href={`/wallet/nfts/collection/${contractName}/token/${tokenId}`}>
-                        <img src="/images/icon/Arrow.svg" alt="arrow" />
+                        <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" alt="arrow" />
                     </Link>
                     <label className="text-xl shadow-lg text-white font-bold m-auto ">Send</label>
                 </div>

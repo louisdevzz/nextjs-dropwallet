@@ -4,7 +4,7 @@ import WebApp from "@twa-dev/sdk";
 import { getVibe, mintNFT, submitTransaction } from "@/hooks/SDK";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-
+import { useRouter } from "next/router";
 
 const Header = dynamic(()=>import("@/components/Header"),{ssr:false})
 
@@ -22,6 +22,7 @@ export default function Vibe(){
     const [enegry,setEnegry] = useState<string>('');
     const [density,setDensity] = useState<string>('');
     const [diversity,setDiversity] = useState<string>('');
+    const router = useRouter()
 
     useEffect(()=>{
         WebApp.CloudStorage.getItem("account",(err,rs)=>setAccount(rs as string));
@@ -31,20 +32,23 @@ export default function Vibe(){
     const numberSelect = [1,2,3,4,5,6,7,8,9,10];
 
     const handleUploadFile = async(event:any)=>{
+        const file = event.target.files[0]
         try {
-            const data = new FormData();
-            data.set("file", event.target.files[0]);
-            data.append("metadata", JSON.stringify({ title:"nft" }));
+            // const data = new FormData();
+            // data.set("file", event.target.files[0]);
+            // data.append("metadata", JSON.stringify({ title:"nft" }));
             setLoadingIPFS(true)
-            const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            const res = await fetch("https://ipfs.near.social/add", {
                 method: "POST",
                 headers: {
-                    Authorization: `Bearer ${process.env.JWT_PINATA_CLOUD}`,
+                    "Content-Type": file.type
+                    // Authorization: `Bearer ${process.env.JWT_PINATA_CLOUD}`,
                 },
-                body: data,
+                body: file,
             });
-            const { IpfsHash } = await res.json();
-            setCid(IpfsHash);
+            const { cid } = await res.json();
+            //console.log("ipfs",cid)
+            setCid(cid);
             setLoadingIPFS(false)
             setUploading(true);
         } catch (e) {
@@ -99,8 +103,24 @@ export default function Vibe(){
             )
             const data = await submitTransaction(signedDelegate);
             if(data.final_execution_status == "FINAL"){
-                location.replace(`/wallet/vibe/success?content=${description}&nonce=${nonce}`)
+                router.push(`/wallet/vibe/success?content=${description}&nonce=${nonce}`)
             }
+        }
+    }
+
+    const handleEnough = () =>{
+        if(account&&
+            cid&&
+            privateKey&&
+            friendliness&&
+            enegry&&
+            density&&
+            diversity&&
+            description)
+        {
+            return true;
+        }else{
+            return false
         }
     }
 
@@ -115,7 +135,7 @@ export default function Vibe(){
                 <div className="p-5 pb-12">
                 <div className="flex flex-row items-center text-center">
                     <Link href="/">
-                        <img src="/images/icon/Arrow.svg" alt="arrow" />
+                        <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" alt="arrow" />
                     </Link>
                     <label className="text-lg text-white font-bold m-auto">Vibe</label>
                 </div>
@@ -123,7 +143,7 @@ export default function Vibe(){
                     
                     <label className="mb-12 mt-2 text-white">Image for post</label><br/>
                     {uploading?(
-                        <img alt="loading" width={150} height={150} className="mt-3" src={`https://olive-rational-giraffe-695.mypinata.cloud/ipfs/${cid}?pinataGatewayToken=kV2NKhwJtxSznI_jwNRMQDq3L6xOR75S4TxUcb8WkPtZp6dbCde12sdDshGDX-JU`}/>
+                        <img alt="loading" width={150} height={150} className="mt-3" src={`https://ipfs.near.social/ipfs/${cid}`}/>
                     ):(
                         loadingIPFS?(
                             <div className="mt-3">
@@ -224,7 +244,7 @@ export default function Vibe(){
                     </select>
                 </div>
                 <div className="mt-12 w-full">
-                    <button onClick={handlePostVibe} className="px-6 py-3 bg-[#2775CA] hover:bg-[#5290D4] w-full rounded-3xl text-white font-bold">Post</button>
+                    <button onClick={handlePostVibe} disabled={!handleEnough()} className={`${handleEnough()?"bg-[#2775CA] hover:bg-[#5290D4]":"bg-black bg-opacity-30"} px-6 py-3  w-full rounded-3xl text-white font-bold`}>Post</button>
                 </div>
             </div>
             

@@ -6,7 +6,7 @@ import axios from "axios";
 import Big from "big.js";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import Image from "next/image";
+import { useRouter } from "next/router";
 
 const Header = dynamic(()=>import("@/components/Header"),{ssr:false})
 
@@ -25,6 +25,8 @@ export default function Send(){
     const [msgAccount,setMsgAccount] = useState<string>("");
     const [status,setStatus] = useState<string>("");
     const [loading,setLoading] = useState<boolean>(false);
+    const router = useRouter()
+
 
     useEffect(()=>{
         WebApp.CloudStorage.getItem("account",(err,rs)=>setAccount(rs as string))
@@ -66,7 +68,8 @@ export default function Send(){
         }
     }
     const handleVaildNearAccount = (event:any)=>{
-        const nearAccount = event.target.value;
+        const nearAccount = event.target.value.toLowerCase();
+        setAddressSend(nearAccount);
         var format = /^(([a-z\d]+[\-_])*[a-z\d]+\.)*([a-z\d]+[\-_])*[a-z\d]+$/g;
 		if (!format.test(nearAccount.toLowerCase())) {
 			setMsgAccount(`<b style='color:red;font-size:14px;'>Error not a valid Near address.</b>`);
@@ -119,20 +122,38 @@ export default function Send(){
                                     // console.log(addressSend)
                                     // console.log(amounts)
                                     // console.log(contract)
-                                    const signedDelegate = await transferToken(
-                                        privateKey,
-                                        account,
-                                        addressSend,
-                                        amounts,
-                                        contract?contract:"NEAR"
-                                        );
-                                        console.log(signedDelegate)
-                                    const data = await submitTransaction(signedDelegate);
-                                    if(data.final_execution_status == "FINAL"){
-                                        location.replace(`/wallet/send/success?hash=${data.transaction.hash}`);
+                                    if(contract&&contract!="NEAR"){
+                                        const signedDelegate = await transferToken(
+                                            privateKey,
+                                            account,
+                                            addressSend,
+                                            amounts,
+                                            contract
+                                            );
+                                            console.log(signedDelegate)
+                                        const data = await submitTransaction(signedDelegate);
+                                        console.log("data",data)
+                                        if(data.final_execution_status == "FINAL"){
+                                            router.push(`/wallet/send/success?hash=${data.transaction.hash}`);
+                                        }else{
+                                            setLoading(false)
+                                            setStatus("<b>Error cannt transfer. try again</b>")
+                                        }
                                     }else{
-                                        setLoading(false)
-                                        setStatus("<b>Error cannt transfer. try again</b>")
+                                        const tx = await transferToken(
+                                            privateKey,
+                                            account,
+                                            addressSend,
+                                            amounts,
+                                            "NEAR"
+                                            );
+                                        console.log("tx",tx)
+                                        if(tx.final_execution_status == "FINAL" ||tx.final_execution_status=="EXECUTED_OPTIMISTIC"){
+                                            router.push(`/wallet/send/success?hash=${tx.transaction.hash}`);
+                                        }else{
+                                            setLoading(false)
+                                            setStatus("<b>Error cannt transfer. try again</b>")
+                                        }
                                     }
                                     
                                 }
@@ -167,21 +188,12 @@ export default function Send(){
                 )}
                 <form onSubmit={handleTransferToken} className="p-5">
                     <div className="flex flex-row items-center text-center">
-                        <Link href="/">
+                        <Link href="/home">
                             <img src="/images/icon/Arrow.svg" alt="arrow" />
                         </Link>
                         <label className="text-lg text-white font-bold m-auto">Send</label>
                     </div>
-                    {status&&(
-                            <div className="bg-red-200 px-6 py-4 my-4 rounded-md text-lg flex items-center mx-auto max-w-lg">
-                                <svg viewBox="0 0 24 24" className="text-red-600 w-5 h-5 sm:w-5 sm:h-5 mr-3">
-                                    <path fill="currentColor"
-                                        d="M12,0A12,12,0,1,0,24,12,12.014,12.014,0,0,0,12,0Zm6.927,8.2-6.845,9.289a1.011,1.011,0,0,1-1.43.188L5.764,13.769a1,1,0,1,1,1.25-1.562l4.076,3.261,6.227-8.451A1,1,0,1,1,18.927,8.2Z">
-                                    </path>
-                                </svg>
-                                <div className="text-red-800 text-sm" dangerouslySetInnerHTML={{__html:status}}/>
-                            </div>
-                        )}
+                    
                     <div className="mt-10 m-auto flex justify-center items-center flex-col">
                         <input onChange={handleChangeAmount}  placeholder="0" type="text" className="text-5xl w-[280px] text-white font-bold bg-transparent border-none outline-none px-4 py-2 text-center"/>
                         <div className="text-[#bdbdbda2] mt-2 text-sm ">≈ {balanceUSD} USD</div>
@@ -192,7 +204,7 @@ export default function Send(){
                     </div>
                     <div className="relative mt-10">
                         <label className="text-white">Select Asset</label>
-                        <button onClick={()=>setIsShow(prv=>!prv)} id="dropdown-button" className="flex mt-2 justify-between w-full px-4 py-3 text-sm font-medium text-white bg-[#331e72] hover:bg-[#473480] rounded-full shadow-sm outline-none">
+                        <button type="button" onClick={()=>setIsShow(prv=>!prv)} id="dropdown-button" className="flex mt-2 justify-between w-full px-4 py-3 text-sm font-medium text-white bg-[#331e72] hover:bg-[#473480] rounded-full shadow-sm outline-none">
                             {token.length > 0 ?token.map((dt:any,i:number)=>{
                                 if(select==""){
                                     return(
@@ -222,7 +234,7 @@ export default function Send(){
                         {isShow&&(
                             <div id="dropdown-menu" className="w-full absolute right-0 mt-3 rounded-md bg-[#444b9a] z-10 p-1 space-y-1">
                                 {token.length > 0?token.map((dt:any,i:number)=>(
-                                    <button onClick={()=>{
+                                    <button type="button" onClick={()=>{
                                         setSelect(dt.symbol)
                                         setIsShow(false)
                                     }} key={i} className="px-4 flex flex-row gap-2 py-2 w-full text-start outline-none text-white hover:bg-[#473480] cursor-pointer rounded-md">
@@ -230,7 +242,7 @@ export default function Send(){
                                         <span className="font-semibold text-sm">{dt.symbol}</span>
                                     </button>  
                                 )):(
-                                    <button onClick={()=>{
+                                    <button type="button" onClick={()=>{
                                         setSelect("NEAR")
                                         setIsShow(false)
                                     }} className="px-4 flex flex-row gap-2 py-2 w-full text-start outline-none text-white hover:bg-[#473480] cursor-pointer rounded-md">
@@ -243,10 +255,20 @@ export default function Send(){
                     </div>
                     <div className="mt-5">
                         <label className="text-white">Send To</label>
-                        <input onChange={handleVaildNearAccount} type="text" className="w-full text-white bg-[#331e72] mt-2 mb-2 px-4 py-3 rounded-full focus:outline-none placeholder-[#545ba9]" placeholder="Send to account ID"/>
-                        <small className="text-white">The account ID must be valid such as.near or contain exactly 64 characters.</small>
+                        <input value={addressSend} onChange={handleVaildNearAccount} type="text" className="w-full text-white bg-[#331e72] mt-2 mb-2 px-4 py-3 rounded-full focus:outline-none placeholder-[#545ba9]" placeholder="Send to account ID"/>
+                        <small className="text-white text-[0.7rem]">The account ID must be valid such as.near or contain exactly 64 characters.</small>
                         {msgAccount&&<div dangerouslySetInnerHTML={{__html:msgAccount}}/>}
                     </div>
+                    {status&&(
+                            <div className="bg-red-200 px-6 py-4 my-4 rounded-md text-lg flex items-center mx-auto max-w-lg">
+                                <svg viewBox="0 0 24 24" className="text-red-600 w-5 h-5 sm:w-5 sm:h-5 mr-3">
+                                    <path fill="currentColor"
+                                        d="M12,0A12,12,0,1,0,24,12,12.014,12.014,0,0,0,12,0Zm6.927,8.2-6.845,9.289a1.011,1.011,0,0,1-1.43.188L5.764,13.769a1,1,0,1,1,1.25-1.562l4.076,3.261,6.227-8.451A1,1,0,1,1,18.927,8.2Z">
+                                    </path>
+                                </svg>
+                                <div className="text-red-800 text-[0.8rem]" dangerouslySetInnerHTML={{__html:status}}/>
+                            </div>
+                        )}
                     <div className="mt-10 w-full">
                         <button type="submit" className="px-6 py-3 bg-[#2775CA] w-full rounded-3xl text-white font-bold">Send</button>
                     </div>

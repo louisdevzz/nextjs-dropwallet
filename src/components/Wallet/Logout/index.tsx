@@ -3,10 +3,12 @@ import { useState,useEffect } from "react";
 import Header from "@/components/Header";
 import Link from "next/link";
 import WebApp from "@twa-dev/sdk";
+import { useRouter } from "next/router";
 
 export default function LogOut(){
     const [account, setAccount] = useState<string>('');
     const [loading,setLoading] = useState<boolean>(false);
+    const router = useRouter()
 
     useEffect(()=>{
         WebApp.CloudStorage.getItem("account",(err,rs)=>setAccount(rs as string));
@@ -16,7 +18,20 @@ export default function LogOut(){
         setLoading(true);
         WebApp.CloudStorage.removeItems(["privateKey","account"]);
         setLoading(false);
-        location.replace("/");
+        router.push("/home");
+    }
+
+    function struncate(str: string){
+        let account;
+        if(str){
+            if(str.length > 30){
+                const format = str.replace(".near","");
+                account = format.slice(0,3)+'...'+format.slice(-3);
+            }else{
+                account = str;
+            }
+        }
+        return account as string;
     }
 
     return(
@@ -29,7 +44,7 @@ export default function LogOut(){
             <Header/>
             <div className="p-5">
                 <Link href={"/wallet/setting"} className="flex flex-row items-center text-center">
-                    <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" width={30} alt="arrow" />
+                    <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" alt="arrow" />
                     <label className="text-lg text-white font-semibold m-auto">Log Out</label>
                 </Link>
                 <div className="pt-10">
@@ -40,7 +55,7 @@ export default function LogOut(){
                     <h5 className="mt-10 text-white font-bold text-3xl pb-3">Warning !</h5>
                     <span className="text-[#ffffff72]">This action will remove the following account from your wallet :</span>
                     <div className="border mt-5 border-white border-opacity-20 shadow-sm rounded-md p-5">
-                        <code className="text-white">{account}</code>
+                        <code className="text-white">{account&&struncate(account)}</code>
                     </div>
                     <div className="mt-16 flex flex-row items-center justify-center">
                         <button onClick={handleLogOut} className="rounded-full before:ease relative h-12 w-72 overflow-hidden border border-red-500 bg-red-500 text-white shadow-2xl transition-all before:absolute before:right-0 before:top-0 before:h-12 before:w-6 before:translate-x-12 before:rotate-6 before:bg-white before:opacity-10 before:duration-700 hover:shadow-red-500 hover:before:-translate-x-40">

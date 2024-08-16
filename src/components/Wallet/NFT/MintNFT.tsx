@@ -4,7 +4,7 @@ import WebApp from "@twa-dev/sdk";
 import { mintNFT, submitTransaction,MintBase } from "@/hooks/SDK";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-
+import { useRouter } from "next/router";
 
 const Header = dynamic(()=>import("@/components/Header"),{ssr:false})
 
@@ -24,11 +24,25 @@ export default function Mint(){
     const [loadingIPFS,setLoadingIPFS] = useState<boolean>(false);
     const [isShow, setIsShow] = useState<boolean>(false);
     const [select,setSelect] = useState<any>(["GENADROP","/assets/genadrop.svg","nft.genadrop.near"]);
+    const [isChecked, setIsChecked] = useState(false)
+    const router = useRouter()
+
 
     useEffect(()=>{
         WebApp.CloudStorage.getItem("account",(err,rs)=>setAccount(rs as string));
         WebApp.CloudStorage.getItem("privateKey",(err,rs)=>setPrivateKey(rs as string));
     },[account,privateKey])
+
+    const handleCheckboxChange = () => {
+        
+        setIsChecked(!isChecked)
+        if(!isChecked){
+            setNearAccount(account)
+        }else{
+            setNearAccount("")
+        }
+    }
+    
 
     const handleUploadFile = async(event:any)=>{
         try {
@@ -109,87 +123,97 @@ export default function Mint(){
     }
 
     const handleVaildNearAccount = (event:any)=>{
-        const nearAccount = event.target.value;
+        const nearAccount = event.target.value.toLowerCase();
+        setNearAccount(nearAccount)
         var format = /^(([a-z\d]+[\-_])*[a-z\d]+\.)*([a-z\d]+[\-_])*[a-z\d]+$/g;
 		if (!format.test(nearAccount.toLowerCase())) {
 			setMsgAccount(`<span style='color:red'>Error not a valid Near address.</span>`);
-		}else if (!nearAccount.includes(".near")) {
+		}else if (!nearAccount.includes(".near")&&nearAccount.length != 64) {
             setMsgAccount("<span style='color:red'>Error not a valid Near address.</span>");
-        } 
+        }else if(nearAccount.length == 64){
+            setMsgAccount("");
+            setNearAccount(nearAccount)
+        }
         else {
 			setMsgAccount("");
             setNearAccount(nearAccount);
         }
     }
 
+    const checkEnough = () =>{
+        if(title&&description&&cid&&nearAccount) return true;
+        return false
+    }
+
     const handleMintNFT = async()=>{
         console.log("mint nft")
         setLoading(true)
-        if(select[0]=="GENADROP"){
-            try{
-                const tokenId = Date.now() + "";
-                const signedDelegate = await mintNFT(
-                    account,
-                    title,
-                    description,
-                    cid,
-                    privateKey,
-                    nearAccount,
-                    tokenId
-                );
-                const data = await submitTransaction(signedDelegate);
-                if (
-                    data.final_execution_status == "FINAL"
-                ) {
-                    location.replace(`/wallet/nfts/mint/success?tokenId=${tokenId}&title=${title}`);
+        if(title&&description&&cid){
+            if(select[0]=="GENADROP"){
+                try{
+                    const tokenId = Date.now() + "";
+                    const signedDelegate = await mintNFT(
+                        account,
+                        title,
+                        description,
+                        cid,
+                        privateKey,
+                        nearAccount,
+                        tokenId
+                    );
+                    const data = await submitTransaction(signedDelegate);
+                    if (
+                        data.final_execution_status == "FINAL"
+                    ) {
+                        router.push(`/wallet/nfts/mint/success?tokenId=${tokenId}&title=${title}`);
+                    }
+                }catch(error){
+                    console.log(error)
                 }
-            }catch(error){
-                console.log(error)
-            }
-        }else if(select[0]=="MINTBASE"){
-            try{
-                const tokenId = Date.now() + "";
-                const signedDelegate = await mintNFT(
-                    account,
-                    title,
-                    description,
-                    cid,
-                    privateKey,
-                    nearAccount,
-                    tokenId
-                );
-                const data = await submitTransaction(signedDelegate);
-                if (
-                    data.final_execution_status == "FINAL"
-                ) {
-                    location.replace(`/wallet/nfts/mint/success?tokenId=${tokenId}&title=${title}`);
+            }else if(select[0]=="MINTBASE"){
+                try{
+                    const tokenId = Date.now() + "";
+                    const signedDelegate = await mintNFT(
+                        account,
+                        title,
+                        description,
+                        cid,
+                        privateKey,
+                        nearAccount,
+                        tokenId
+                    );
+                    const data = await submitTransaction(signedDelegate);
+                    if (
+                        data.final_execution_status == "FINAL"
+                    ) {
+                        router.push(`/wallet/nfts/mint/success?tokenId=${tokenId}&title=${title}`);
+                    }
+                }catch(error){
+                    console.log(error)
                 }
-            }catch(error){
-                console.log(error)
+                // const signedDelegate = await MintBase({
+                //     accountId: account,
+                //     privateKey: privateKey,
+                //     title: title,
+                //     description: description,
+                //     media: file as File,
+                // })
+                // const data = await submitTransaction(signedDelegate);
+                // if (
+                //     data.transaction_outcome?.outcome?.status
+                //         ?.SuccessReceiptId
+                // ) {
+                //     setLoading(false);
+                //     localStorage.setItem("title",title);
+                //     location.replace("/wallet/nfts/mint/success")
+                // }
+            }else{
+                setLoading(false)
+                console.log("select error")
             }
-            // const signedDelegate = await MintBase({
-            //     accountId: account,
-            //     privateKey: privateKey,
-            //     title: title,
-            //     description: description,
-            //     media: file as File,
-            // })
-            // const data = await submitTransaction(signedDelegate);
-            // if (
-            //     data.transaction_outcome?.outcome?.status
-            //         ?.SuccessReceiptId
-            // ) {
-            //     setLoading(false);
-            //     localStorage.setItem("title",title);
-            //     location.replace("/wallet/nfts/mint/success")
-            // }
-        }else{
-            setLoading(false)
-            console.log("select error")
         }
-        
     }
-    console.log("select",select[0])
+    //console.log("select",select[0])
     return(
         <div className="w-full min-h-screen bg-[#180E35]">
             <Header/>
@@ -200,7 +224,7 @@ export default function Mint(){
             )}
             <div className="p-5 pb-12">
                 <div className="flex flex-row items-center text-center">
-                    <Link href="/">
+                    <Link href="/home">
                         <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" alt="arrow" />
                     </Link>
                     <label className="text-lg text-white font-bold m-auto">Mint NFT</label>
@@ -305,15 +329,40 @@ export default function Mint(){
                         <div dangerouslySetInnerHTML={{__html:msgDesc}}/>
                     )}
                 </div>
-                <div className="">
-                    <label htmlFor="account" className="text-gray-300">Valid Near Account</label>
-                    <input onChange={handleVaildNearAccount} type="text" name="account" className={`w-full text-white ${msgAccount?"border border-red-600":"border border-white border-opacity-20"} shadow-sm bg-black bg-opacity-25 mt-2 mb-2 px-4 py-3 rounded-lg focus:outline-none placeholder-[#ffffff3c]`} placeholder="Enter valid Near Account"/>
-                    {msgAccount&&(
-                        <div dangerouslySetInnerHTML={{__html:msgAccount}}/>
-                    )}
+                <div className="flex flex-col justify-between gap-3 mt-2">
+                    <div className="flex flex-row justify-between">
+                        <span className="text-white">Mint to {isChecked?"my":"another"} Address</span>
+                        <label className='flex cursor-pointer select-none items-center'>
+                            <div className='relative'>
+                            <input
+                                type='checkbox'
+                                checked={isChecked}
+                                onChange={handleCheckboxChange}
+                                className='sr-only'
+                            />
+                            <div
+                                className={`box block h-8 w-14 rounded-full ${
+                                isChecked ? 'bg-blue-500' : 'bg-gray-400'
+                                }`}
+                            ></div>
+                            <div
+                                className={`absolute left-1 top-1 flex  h-6 w-6 items-center bg-white justify-center rounded-full transition ${
+                                isChecked ? 'translate-x-full' : ''
+                                }`}
+                            ></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div className="flex flex-col">
+                        <label htmlFor="account" className="text-gray-300">Receiver Address</label>
+                        <input value={nearAccount} disabled={isChecked} onChange={handleVaildNearAccount} type="text" name="account" className={`w-full text-white ${msgAccount?"border border-red-600":"border border-white border-opacity-20"} shadow-sm bg-black bg-opacity-25 mt-2 mb-2 px-4 py-3 rounded-lg focus:outline-none placeholder-[#ffffff3c]`} placeholder="Input a valid Receiver Address"/>
+                        {msgAccount&&(
+                            <div dangerouslySetInnerHTML={{__html:msgAccount}}/>
+                        )}
+                    </div>
                 </div>
                 <div className="mt-5 w-full">
-                    <button onClick={handleMintNFT} className="px-6 py-3 bg-[#2775CA] hover:bg-[#5290D4] w-full rounded-3xl text-white font-bold">Mint</button>
+                    <button onClick={handleMintNFT} disabled={!checkEnough()} className={`px-6 py-3 ${checkEnough()?"bg-[#2775CA] hover:bg-[#5290D4]":"bg-black bg-opacity-30"} w-full rounded-3xl text-white font-bold`}>Mint</button>
                 </div>
             </div>
             

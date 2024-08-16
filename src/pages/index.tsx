@@ -1,9 +1,11 @@
 import dynamic from "next/dynamic"
 
-const Home = dynamic(()=>import("@/components/Home"),{ssr:false})
+const App = dynamic(()=>import("@/components/App"),{ssr:false})
 
-export default function IndexPage() {
+const IndexPage = () => {
   return (
-    <Home/>
+    <App/>
   );
 };
+
+export default IndexPage;

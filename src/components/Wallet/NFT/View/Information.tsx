@@ -4,7 +4,7 @@ import { useState,useEffect } from "react";
 import WebApp from "@twa-dev/sdk";
 import { getNFT } from "@/hooks/SDK";
 import Link from "next/link";
-import Image from "next/image";
+
 
 const Header = dynamic(()=>import("@/components/Header"),{ssr:false})
 
@@ -28,11 +28,12 @@ export default function Information({params}:{params:string}){
             contractOwnedList.forEach((item, index) => {
                 totalNft += data.nft[item].length;
                 if(data.nft[item][index].nft_contract_id == params){
-                    setNFTName(data.nft[item][1].nft_contract_name)
+                    setNFTName(data.nft[item][0].nft_contract_name)
+                    
                     //console.log("item",data.nft[item][1])
                     for(let i = 0;i<data.nft[item].length;i++){
                         console.log("nft",data.nft[item][i])
-                        listNFT.push(<Link href={`/wallet/nfts/collection/${data.nft[item][i].nft_contract_id}/token/${data.nft[item][i].token_id}`} className="flex flex-col items-start relative">
+                        listNFT.push(<Link key={i} href={`/wallet/nfts/collection/${data.nft[item][i].nft_contract_id}/token/${data.nft[item][i].token_id}`} className="flex flex-col items-start relative">
                             {data.nft[item][i].media?(
                                 <img className="rounded-xl" width={110} src={data.nft[item][i].media} alt="NFT"/>
                             ):(
@@ -56,14 +57,14 @@ export default function Information({params}:{params:string}){
             setNFTs(listNFT)
         }
     }
-    console.log(nfts)
+    //console.log(nfts)
     return(
         <div className="w-full min-h-screen bg-[#180E35]">
             <Header/>
             <div className="p-5">
                 <div className="flex flex-row items-center text-center">
                     <Link href="/wallet/nfts">
-                        <img src="/images/icon/Arrow.svg" alt="arrow" />
+                        <img className="bg-black bg-opacity-25 rounded-full hover:bg-opacity-35" src="/images/icon/Arrow.svg" alt="arrow" />
                     </Link>
                     <label className="text-lg text-white font-bold m-auto">{NFTName}</label>
                 </div>

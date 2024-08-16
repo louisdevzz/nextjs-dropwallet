@@ -91,6 +91,13 @@ export const MintBase = async({ accountId,privateKey,title, description,media }:
   return delegate;
 }
 
+export const signerAccount = async() =>{
+  const keyStore = new InMemoryKeyStore();
+  await keyStore.setKey(process.env.NEXT_PUBLIC_NETWORK_ID, process.env.NEXT_PUBLIC_NETWORK_ID  == "mainnet" ? process.env.NEXT_PUBLIC_RELAYER_ACCOUNT_ID_NEAR_MAINNET: process.env.NEXT_PUBLIC_RELAYER_ACCOUNT_ID_NEAR_TESTNET , KeyPair.fromString( process.env.NEXT_PUBLIC_NETWORK_ID  == "mainnet" ? process.env.RELAYER_PRIVATE_KEY_NEAR_MAINNET: process.env.RELAYER_PRIVATE_KEY_NEAR_TESTNET ));
+  const signerAccount = await connects(process.env.NEXT_PUBLIC_NETWORK_ID  == "mainnet" ? process.env.NEXT_PUBLIC_RELAYER_ACCOUNT_ID_NEAR_MAINNET as string : process.env.NEXT_PUBLIC_RELAYER_ACCOUNT_ID_NEAR_TESTNET as string , keyStore,process.env.NEXT_PUBLIC_NETWORK_ID );
+  return signerAccount;
+}
+
 export const CreateAccount = async(accountId:any) => {
     console.log("accountid: ",accountId)
     const keyStore = new InMemoryKeyStore();
@@ -152,7 +159,7 @@ export const stateAccounts = async(accountId:string) => {
 
 export const getAccount = async(pub:string)=>{
   try{
-    const account = (await fetch(`https://api3.nearblocks.io/v1/kitwallet/publickey/${pub}/accounts`)).json();
+    const account = (await fetch(`https://api.nearblocks.io/v1/kitwallet/publickey/${pub}/accounts`)).json();
     return account;
   }catch(error){
     return error;
@@ -400,6 +407,13 @@ async function syncProfile(accountId:string,privateKey:string , tgUserName:strin
     return delegate;
 }
 
+export async function connectAccount(accountId: string, privateKey: string){
+  const keyStore = new InMemoryKeyStore();
+  await keyStore.setKey(process.env.NEXT_PUBLIC_NETWORK_ID, accountId, KeyPair.fromString(privateKey));
+  const signerAccount = await connects(accountId, keyStore, process.env.NEXT_PUBLIC_NETWORK_ID);
+  return signerAccount;
+}
+
 export async function transferToken(privateKey:string, accountId:string ,receiverId:string , amount:string , tokenContract:string) {
     const keyStore = new InMemoryKeyStore();
     
@@ -408,16 +422,14 @@ export async function transferToken(privateKey:string, accountId:string ,receive
   
     if(tokenContract == 'NEAR'){
     //const newAmount = (parseInt(amount)-50000000000000000000).toLocaleString('fullwide', {useGrouping:false}) ;
-    try {
-        const deserializeDelegate = await signerAccount.signedDelegate({
-          actions: [actionCreators.transfer(amount)],
-          blockHeightTtl: 60,
-          receiverId: receiverId,
-      });
-        return deserializeDelegate;
-    } catch (error) {
-        return {error};
-    }
+      try {
+        if(signerAccount){
+          const tx = await signerAccount.sendMoney(receiverId,amount);
+          return tx;
+        }
+      } catch (error) {
+          return {error};
+      }
     }else{
         const gas = "300000000000000";
         const deposit = "1";
@@ -486,7 +498,7 @@ export async function getVibe(accountId:string,cid:string,privateKey:string,frie
     let args  = {
         data: {
           [accountId]: {
-            post: {
+            post:     {
               main: JSON.stringify({
                 type:"md",
                 image:{

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@builddao/near-social-js": "^1.0.1",
     "@heroicons/react": "^2.1.4",
     "@near-js/accounts": "^1.2.1",
     "@near-js/crypto": "^1.2.4",
@@ -27,13 +28,16 @@
     "dotenv": "^16.4.5",
     "eruda": "^3.0.1",
     "form-data": "^4.0.0",
+    "framer-motion": "^11.2.13",
     "ioredis": "^5.4.1",
     "near-api-js": "^4.0.2",
     "near-seed-phrase": "^0.2.0",
     "net": "^1.0.2",
     "next": "^14.2.4",
     "react": "^18.3.1",
+    "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.3.1",
+    "react-toastify": "^10.0.5",
     "tls": "^0.0.1"
   },
   "devDependencies": {
@@ -42,6 +46,7 @@
     "@types/bn.js": "^5.1.5",
     "@types/node": "^20.12.11",
     "@types/react": "^18.3.2",
+    "@types/react-copy-to-clipboard": "^5.0.7",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
